@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,6 +17,13 @@ public class VoxelGrid
     public float VoxelSize { get; private set; }
 
     #endregion Public fields
+
+    #region Private fields
+
+    List<Voxel> _currentSelection;
+    Voxel[] _currentCorners;
+
+    #endregion Private fields
 
     #region Constructors
 
@@ -61,7 +69,56 @@ public class VoxelGrid
 
     #region Public methods
 
+    public void SetCorners(Voxel[] corners)
+    {
+        _currentCorners = corners;
+        if (_currentSelection != null)
+        {
+            _currentSelection.Where(v => v.State == VoxelState.Yellow).ToList().ForEach(v => v.SetState(VoxelState.White));
+            
+        }
+        
+        _currentSelection = new List<Voxel>();
+        
 
+        Vector3Int c0 = corners[0].Index;
+        Vector3Int c1 = corners[1].Index;
+        int xLen = Mathf.Abs(c0.x - c1.x);
+        int yLen = Mathf.Abs(c0.y - c1.y);
+        int zLen = Mathf.Abs(c0.z - c1.z);
+
+        for (int x = Mathf.Min(c0.x, c1.x); x <= Mathf.Max(c0.x, c1.x); x++)
+        {
+            for (int y = Mathf.Min(c0.y, c1.y); y <= Mathf.Max(c0.y, c1.y); y++)
+            {
+                for (int z = Mathf.Min(c0.z, c1.z); z <= Mathf.Max(c0.z, c1.z); z++)
+                {
+                    var voxel = Voxels[x, y, z];
+                    _currentSelection.Add(voxel);
+                    if (voxel.Index != c0) voxel.SetState(VoxelState.Yellow);
+                }
+            }
+        }
+    }
+
+    public void MakeBox(int height)
+    {
+        if (_currentSelection == null || _currentSelection.Count == 0) return;
+
+        int baseLevel = _currentSelection.Min(v => v.Index.y);
+        int topLevel = Mathf.RoundToInt(GridSize.y * height);
+
+        foreach (var voxel in _currentSelection)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                Voxels[voxel.Index.x, y, voxel.Index.z].SetState(VoxelState.Black);
+            }
+        }
+
+        _currentCorners = null;
+        _currentSelection = new List<Voxel>();
+    }
 
     #endregion
 

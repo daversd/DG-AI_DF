@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-public enum VoxelState { White, Black, Red, Empty };
+public enum VoxelState { White, Black, Red, Yellow, Empty };
 public class Voxel : IEquatable<Voxel>
 {
     #region Public fields
@@ -117,6 +117,12 @@ public class Voxel : IEquatable<Voxel>
             renderer.enabled = true;
             collider.enabled = true;
             renderer.material = Resources.Load<Material>("Materials/Black");
+        }
+        else if (State == VoxelState.Yellow)
+        {
+            renderer.enabled = true;
+            collider.enabled = true;
+            renderer.material = Resources.Load<Material>("Materials/Yellow");
         }
         else if (State == VoxelState.Empty)
         {
