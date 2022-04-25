@@ -120,11 +120,123 @@ public class VoxelGrid
         _currentSelection = new List<Voxel>();
     }
 
+    public void RectangleFromCorner(Voxel corner, Vector3Int size)
+    {
+        var c0 = corner.Index;
+        var c1 = IndexFromSize(corner.Index, size);
+        if (c1 == null) return;
+        for (int x = Mathf.Min(c0.x, c1.x); x < Mathf.Max(c0.x, c1.x); x++)
+        {
+            for (int y = Mathf.Min(c0.y, c1.y); y <= Mathf.Max(c0.y, c1.y); y++)
+            {
+                for (int z = Mathf.Min(c0.z, c1.z); z <= Mathf.Max(c0.z, c1.z); z++)
+                {
+                    var voxel = Voxels[x, y, z];
+                    voxel.SetState(VoxelState.Black);
+                }
+            }
+        }
+    }
+
+    public void ClearGrid()
+    {
+        foreach (Voxel voxel in Voxels)
+        {
+            if (voxel.Index.y == 0) voxel.SetState(VoxelState.White);
+            else voxel.SetState(VoxelState.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Get an image from the grid at the selected layer
+    /// using the <see cref="VoxelState"/> of the voxels
+    /// </summary>
+    /// <param name="layer">Default layer set to 0</param>
+    /// <returns>The image with the colored states</returns>
+    public Texture2D ImageFromGrid(int layer = 0, bool transparent = false)
+    {
+        TextureFormat textureFormat;
+        if (transparent) textureFormat = TextureFormat.RGBA32;
+        else textureFormat = TextureFormat.RGB24;
+
+        Texture2D gridImage = new Texture2D(GridSize.x, GridSize.z, textureFormat, true, true);
+
+        for (int i = 0; i < gridImage.width; i++)
+        {
+            for (int j = 0; j < gridImage.height; j++)
+            {
+                var voxel = Voxels[i, layer, j];
+
+                Color c;
+                if (voxel.State == VoxelState.Black) c = Color.black;
+                else if (voxel.State == VoxelState.Red) c = Color.red;
+                else if (voxel.State == VoxelState.Yellow) c = Color.yellow;
+                else c = new Color(1f, 1f, 1f, 0f);
+
+
+                gridImage.SetPixel(i, j, c);
+            }
+        }
+
+        gridImage.Apply();
+
+        return gridImage;
+    }
+
+    public void SetStatesFromImage(Texture2D image, int startY, int endY)
+    {
+        var resized = new Texture2D(image.width, image.height);
+        resized.SetPixels(image.GetPixels());
+        resized.Apply();
+        TextureScale.Point(resized, GridSize.x, GridSize.z);
+        // Iterate through the XZ plane
+        for (int x = 0; x < GridSize.x; x++)
+        {
+            for (int z = 0; z < GridSize.z; z++)
+            {
+                // Get the pixel color from the image
+                var pixel = resized.GetPixel(x, z);
+
+                // Check if pixel is red
+                if (pixel.r > pixel.g && pixel.a > 0.5)
+                {
+                    // Set respective color to voxel
+                    var y = Mathf.RoundToInt((endY - startY) * pixel.a) + startY;
+                    Voxels[x, y, z].SetState(VoxelState.Red);
+                }
+                else if (pixel == Color.black)
+                {
+                    for (int y = 0; y < GridSize.y; y++)
+                    {
+                        Voxels[x, y, z].SetState(VoxelState.Black);
+                    }
+                    
+                }
+            }
+        }
+    }
+
     #endregion
 
     #region Private methods
 
+    Vector3Int IndexFromSize(Vector3Int origin, Vector3Int size)
+    {
+        var xDirections = new List<int> { 1, -1 }.Shuffle();
+        var zDirections = new List<int> { 1, -1 }.Shuffle();
 
+        Vector3Int secondCorner = origin;
+
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                secondCorner = new Vector3Int(origin.x + xDirections[i] * size.x, origin.y + size.y, origin.z + zDirections[j] * size.z);
+                if (secondCorner.IsInsideGrid(GridSize)) return secondCorner;
+            }
+        }
+        return secondCorner;
+    }
 
     #endregion
 

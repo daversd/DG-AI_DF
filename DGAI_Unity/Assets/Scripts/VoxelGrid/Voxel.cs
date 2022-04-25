@@ -124,6 +124,12 @@ public class Voxel : IEquatable<Voxel>
             collider.enabled = true;
             renderer.material = Resources.Load<Material>("Materials/Yellow");
         }
+        else if (State == VoxelState.Red)
+        {
+            renderer.enabled = true;
+            collider.enabled = true;
+            renderer.material = Resources.Load<Material>("Materials/Red");
+        }
         else if (State == VoxelState.Empty)
         {
             renderer.enabled = false;
