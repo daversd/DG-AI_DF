@@ -49,7 +49,14 @@ public class EnvironmentManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.V))
         {
             var img = Resources.Load<Texture2D>("Data/map");
-            _grid.SetStatesFromImage(img, 4, 9);
+            _grid.SetStatesFromImage(img, 1, 9);
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "Images/test.csv");
+            Util.SaveVoxels(_grid, new List<VoxelState>() { VoxelState.Red, VoxelState.Black }, path);
+            //var img = Resources.Load<Texture2D>("Data/map");
+            //_grid.SetStatesFromImage(img, 1, 9);
         }
     }
 

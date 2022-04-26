@@ -34,7 +34,7 @@ static class Util
             foreach (var voxel in filteredVoxels)
             {
                 var index = voxel.Index;
-                var line = $"{index.x}_{index.y}_{index.z}_{voxel.State}";
+                var line = $"{index.x},{index.y},{index.z},{voxel.State}";
                 sw.WriteLine(line);
             }
         }

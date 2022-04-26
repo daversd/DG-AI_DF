@@ -198,11 +198,15 @@ public class VoxelGrid
                 var pixel = resized.GetPixel(x, z);
 
                 // Check if pixel is red
-                if (pixel.r > pixel.g && pixel.a > 0.5)
+                if (pixel.r > pixel.g && pixel.a > 0.15)
                 {
                     // Set respective color to voxel
                     var y = Mathf.RoundToInt((endY - startY) * pixel.a) + startY;
                     Voxels[x, y, z].SetState(VoxelState.Red);
+                    for (int i = 1; i <= 2; i++)
+                    {
+                        Voxels[x, y - i, z].SetState(VoxelState.Red);
+                    }
                 }
                 else if (pixel == Color.black)
                 {
