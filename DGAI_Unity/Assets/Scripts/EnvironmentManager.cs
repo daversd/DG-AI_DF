@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using System.IO;
 
 public enum AppStage { Neutral = 0, Selecting = 1, Done = 2 }
@@ -13,6 +14,12 @@ public class EnvironmentManager : MonoBehaviour
     Voxel[] _corners;
     AppStage _stage;
     int _height;
+    [SerializeField]
+    Slider _sliderX;
+    [SerializeField]
+    Slider _sliderY;
+    [SerializeField]
+    Slider _sliderZ;
 
     public GameObject MouseTag;
     
@@ -23,9 +30,10 @@ public class EnvironmentManager : MonoBehaviour
         MouseTag.SetActive(false);
         _stage = AppStage.Neutral;
         _corners = new Voxel[2];
-        var gridSize = new Vector3Int(64, 10, 64);
+        var gridSize = new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value);
         _height = gridSize.y;
-        _grid = new VoxelGrid(gridSize, transform.position, 1f, transform);
+        var maxSize = new Vector3Int((int)_sliderX.maxValue, (int)_sliderY.maxValue, (int)_sliderZ.maxValue);
+        _grid = new VoxelGrid(gridSize, maxSize,transform.position, 1f, transform);
     }
 
     // Update is called once per frame
@@ -94,7 +102,7 @@ public class EnvironmentManager : MonoBehaviour
                 if (hit.transform.CompareTag("Voxel"))
                 {
                     Voxel voxel = hit.transform.GetComponent<VoxelTrigger>().Voxel;
-                    if (voxel.State != VoxelState.Black)
+                    if (voxel.State == VoxelState.White)
                     {
                         if (_stage == AppStage.Neutral)
                         {
@@ -141,5 +149,11 @@ public class EnvironmentManager : MonoBehaviour
             _height = Mathf.Clamp(_height - 1, 1, _grid.GridSize.y);
             MouseTag.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = _height.ToString();
         }
+    }
+
+    public void UpdateGridSize()
+    {
+        _height = Mathf.Clamp(_height, 1, (int)_sliderY.value);
+        _grid.ChangeGridSize(new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value));
     }
 }

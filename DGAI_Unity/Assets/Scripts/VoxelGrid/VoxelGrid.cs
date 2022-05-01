@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
@@ -20,8 +21,14 @@ public class VoxelGrid
 
     #region Private fields
 
+    Voxel[,,] _allVoxels;
+    Vector3Int _maxSize;
+
     List<Voxel> _currentSelection;
     Voxel[] _currentCorners;
+
+    GameObject _voxelPrefab;
+    Transform _parent;
 
     #endregion Private fields
 
@@ -33,35 +40,19 @@ public class VoxelGrid
     /// <param name="size">Size of the grid</param>
     /// <param name="origin">Origin of the grid</param>
     /// <param name="voxelSize">The size of each <see cref="Voxel"/></param>
-    public VoxelGrid(Vector3Int size, Vector3 origin, float voxelSize, Transform parent = null)
+    public VoxelGrid(Vector3Int size, Vector3Int maxSize, Vector3 origin, float voxelSize, Transform parent = null)
     {
         GridSize = size;
+
         Origin = origin;
         VoxelSize = voxelSize;
+        _maxSize = maxSize;
 
-        var prefab = Resources.Load<GameObject>("Prefabs/cube");
-
-        Voxels = new Voxel[GridSize.x, GridSize.y, GridSize.z];
-
-        for (int x = 0; x < GridSize.x; x++)
-        {
-            for (int y = 0; y < GridSize.y; y++)
-            {
-                for (int z = 0; z < GridSize.z; z++)
-                {
-                    Voxels[x, y, z] = new Voxel(
-                        new Vector3Int(x, y, z),
-                        this,
-                        prefab,
-                        state: y == 0 ? VoxelState.White : VoxelState.Empty,
-                        parent: parent,
-                        sizeFactor: 0.96f);
-                }
-            }
-        }
-
-        MakeFaces();
-        MakeEdges();
+        _voxelPrefab = Resources.Load<GameObject>("Prefabs/cube");
+        _parent = parent;
+        CreateVoxels();
+        //MakeFaces();
+        //MakeEdges();
     }
 
 
@@ -69,17 +60,63 @@ public class VoxelGrid
 
     #region Public methods
 
+    public void ChangeGridSize(Vector3Int newSize)
+    {
+        Voxel[,,] tempVoxels = new Voxel[newSize.x, newSize.y, newSize.z];
+        //Array.Copy(Voxels, tempVoxels, Mathf.Min(newSize.x * newSize.y* newSize.z, GridSize.x * GridSize.y * GridSize.z));
+
+        int startX = newSize.x == GridSize.x ? 0 : Mathf.Min(GridSize.x - 1, newSize.x - 1);
+        int endX = Mathf.Max(GridSize.x, newSize.x);
+        
+        int startY = newSize.y == GridSize.y ? 0 : Mathf.Min(GridSize.y - 1, newSize.y - 1);
+        int endY = Mathf.Max(GridSize.y, newSize.y);
+        
+        int startZ = newSize.z == GridSize.z ? 0 : Mathf.Min(GridSize.z - 1, newSize.z - 1);
+        int endZ = Mathf.Max(GridSize.z, newSize.z);
+
+
+        for (int x = 0; x < endX; x++)
+        {
+            for (int y = 0; y < endY; y++)
+            {
+                for (int z = 0; z < endZ; z++)
+                {
+                    var index = new Vector3Int(x, y, z);
+                    if (Util.IsInsideGrid(index, GridSize) && !Util.IsInsideGrid(index, newSize))
+                    {
+                        // remove
+                        _allVoxels[x, y, z].SetState(VoxelState.NotUsed);
+                    }
+                    else if(!Util.IsInsideGrid(index, GridSize) && Util.IsInsideGrid(index, newSize))
+                    {
+                        // add
+                        var voxel = _allVoxels[x, y, z];
+                        if(y == 0) voxel.SetState(VoxelState.White);
+                        else voxel.SetState(VoxelState.Empty);
+                        tempVoxels[x, y, z] = voxel;
+                    }
+                    else
+                    {
+                        var voxel = _allVoxels[x, y, z];
+                        tempVoxels[x, y, z] = voxel;
+                    }
+                }
+            }
+        }
+        
+        Voxels = tempVoxels;
+        GridSize = newSize;
+    }
+
     public void SetCorners(Voxel[] corners)
     {
         _currentCorners = corners;
         if (_currentSelection != null)
         {
             _currentSelection.Where(v => v.State == VoxelState.Yellow).ToList().ForEach(v => v.SetState(VoxelState.White));
-            
         }
         
         _currentSelection = new List<Voxel>();
-        
 
         Vector3Int c0 = corners[0].Index;
         Vector3Int c1 = corners[1].Index;
@@ -123,7 +160,7 @@ public class VoxelGrid
     public void RectangleFromCorner(Voxel corner, Vector3Int size)
     {
         var c0 = corner.Index;
-        var c1 = IndexFromSize(corner.Index, size);
+        var c1 = DiagonalCornerFromSize(corner.Index, size);
         if (c1 == null) return;
         for (int x = Mathf.Min(c0.x, c1.x); x < Mathf.Max(c0.x, c1.x); x++)
         {
@@ -224,7 +261,38 @@ public class VoxelGrid
 
     #region Private methods
 
-    Vector3Int IndexFromSize(Vector3Int origin, Vector3Int size)
+    void CreateVoxels()
+    {
+        if (_allVoxels == null) _allVoxels = new Voxel[_maxSize.x, _maxSize.y, _maxSize.z];
+
+        Voxels = new Voxel[GridSize.x, GridSize.y, GridSize.z];
+
+        for (int x = 0; x < _maxSize.x; x++)
+        {
+            for (int y = 0; y < _maxSize.y; y++)
+            {
+                for (int z = 0; z < _maxSize.z; z++)
+                {
+                    var index = new Vector3Int(x, y, z);
+                    _allVoxels[x, y, z] = new Voxel(
+                        index,
+                        this,
+                        _voxelPrefab,
+                        state: VoxelState.NotUsed,
+                        //state: y == 0 ? VoxelState.White : VoxelState.Empty,
+                        parent: _parent,
+                        sizeFactor: 0.96f);
+                    if (Util.IsInsideGrid(index, GridSize))
+                    {
+                        Voxels[x, y, z] = _allVoxels[x, y, z];
+                        Voxels[x, y, z].SetState(y == 0 ? VoxelState.White : VoxelState.Empty);
+                    }
+                }
+            }
+        }
+    }
+
+    Vector3Int DiagonalCornerFromSize(Vector3Int origin, Vector3Int size)
     {
         var xDirections = new List<int> { 1, -1 }.Shuffle();
         var zDirections = new List<int> { 1, -1 }.Shuffle();

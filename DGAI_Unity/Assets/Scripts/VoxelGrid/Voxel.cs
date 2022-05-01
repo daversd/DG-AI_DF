@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-public enum VoxelState { White, Black, Red, Yellow, Empty };
+public enum VoxelState { White, Black, Red, Yellow, Empty, NotUsed };
 public class Voxel : IEquatable<Voxel>
 {
     #region Public fields
@@ -46,6 +46,11 @@ public class Voxel : IEquatable<Voxel>
     #endregion
 
     #region Public methods
+
+    public void DestroyGO()
+    {
+        GameObject.Destroy(_voxelGO);
+    }
 
     /// <summary>
     /// Get the neighbouring voxels at each face, if it exists
@@ -130,7 +135,7 @@ public class Voxel : IEquatable<Voxel>
             collider.enabled = true;
             renderer.material = Resources.Load<Material>("Materials/Red");
         }
-        else if (State == VoxelState.Empty)
+        else if (State == VoxelState.Empty || State == VoxelState.NotUsed)
         {
             renderer.enabled = false;
             collider.enabled = false;
