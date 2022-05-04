@@ -61,7 +61,7 @@ public class Voxel : IEquatable<Voxel>
         int x = Index.x;
         int y = Index.y;
         int z = Index.z;
-        var s = _voxelGrid.GridSize;
+        var s = _voxelGrid.Size;
 
         if (x != s.x - 1) yield return _voxelGrid.Voxels[x + 1, y, z];
         if (x != 0) yield return _voxelGrid.Voxels[x - 1, y, z];
@@ -80,7 +80,7 @@ public class Voxel : IEquatable<Voxel>
         int x = Index.x;
         int y = Index.y;
         int z = Index.z;
-        var s = _voxelGrid.GridSize;
+        var s = _voxelGrid.Size;
 
         if (x != s.x - 1) result[0] = _voxelGrid.Voxels[x + 1, y, z];
         else result[0] = null;

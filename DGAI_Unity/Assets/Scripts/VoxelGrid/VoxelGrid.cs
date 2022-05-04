@@ -9,7 +9,7 @@ public class VoxelGrid
 {
     #region Public fields
 
-    public Vector3Int GridSize;
+    public Vector3Int Size;
     public Voxel[,,] Voxels;
     public Face[][,,] Faces = new Face[3][,,];
     public Edge[][,,] Edges = new Edge[3][,,];
@@ -30,6 +30,8 @@ public class VoxelGrid
     GameObject _voxelPrefab;
     Transform _parent;
 
+    GameObject _previewCube;
+
     #endregion Private fields
 
     #region Constructors
@@ -42,7 +44,7 @@ public class VoxelGrid
     /// <param name="voxelSize">The size of each <see cref="Voxel"/></param>
     public VoxelGrid(Vector3Int size, Vector3Int maxSize, Vector3 origin, float voxelSize, Transform parent = null)
     {
-        GridSize = size;
+        Size = size;
 
         Origin = origin;
         VoxelSize = voxelSize;
@@ -51,8 +53,12 @@ public class VoxelGrid
         _voxelPrefab = Resources.Load<GameObject>("Prefabs/cube");
         _parent = parent;
         CreateVoxels();
-        //MakeFaces();
-        //MakeEdges();
+
+        var previewPrefab = Resources.Load<GameObject>("Prefabs/PreviewCube");
+        _previewCube = GameObject.Instantiate(previewPrefab);
+        _previewCube.transform.SetParent(_parent);
+        _previewCube.SetActive(false);
+        UpdatePreview(Size);
     }
 
 
@@ -63,16 +69,15 @@ public class VoxelGrid
     public void ChangeGridSize(Vector3Int newSize)
     {
         Voxel[,,] tempVoxels = new Voxel[newSize.x, newSize.y, newSize.z];
-        //Array.Copy(Voxels, tempVoxels, Mathf.Min(newSize.x * newSize.y* newSize.z, GridSize.x * GridSize.y * GridSize.z));
 
-        int startX = newSize.x == GridSize.x ? 0 : Mathf.Min(GridSize.x - 1, newSize.x - 1);
-        int endX = Mathf.Max(GridSize.x, newSize.x);
+        int startX = newSize.x == Size.x ? 0 : Mathf.Min(Size.x - 1, newSize.x - 1);
+        int endX = Mathf.Max(Size.x, newSize.x);
         
-        int startY = newSize.y == GridSize.y ? 0 : Mathf.Min(GridSize.y - 1, newSize.y - 1);
-        int endY = Mathf.Max(GridSize.y, newSize.y);
+        int startY = newSize.y == Size.y ? 0 : Mathf.Min(Size.y - 1, newSize.y - 1);
+        int endY = Mathf.Max(Size.y, newSize.y);
         
-        int startZ = newSize.z == GridSize.z ? 0 : Mathf.Min(GridSize.z - 1, newSize.z - 1);
-        int endZ = Mathf.Max(GridSize.z, newSize.z);
+        int startZ = newSize.z == Size.z ? 0 : Mathf.Min(Size.z - 1, newSize.z - 1);
+        int endZ = Mathf.Max(Size.z, newSize.z);
 
 
         for (int x = 0; x < endX; x++)
@@ -82,12 +87,12 @@ public class VoxelGrid
                 for (int z = 0; z < endZ; z++)
                 {
                     var index = new Vector3Int(x, y, z);
-                    if (Util.IsInsideGrid(index, GridSize) && !Util.IsInsideGrid(index, newSize))
+                    if (Util.IsInsideGrid(index, Size) && !Util.IsInsideGrid(index, newSize))
                     {
                         // remove
                         _allVoxels[x, y, z].SetState(VoxelState.NotUsed);
                     }
-                    else if(!Util.IsInsideGrid(index, GridSize) && Util.IsInsideGrid(index, newSize))
+                    else if(!Util.IsInsideGrid(index, Size) && Util.IsInsideGrid(index, newSize))
                     {
                         // add
                         var voxel = _allVoxels[x, y, z];
@@ -105,7 +110,7 @@ public class VoxelGrid
         }
         
         Voxels = tempVoxels;
-        GridSize = newSize;
+        Size = newSize;
     }
 
     public void SetCorners(Voxel[] corners)
@@ -143,7 +148,7 @@ public class VoxelGrid
         if (_currentSelection == null || _currentSelection.Count == 0) return;
 
         int baseLevel = _currentSelection.Min(v => v.Index.y);
-        int topLevel = Mathf.RoundToInt(GridSize.y * height);
+        int topLevel = Mathf.RoundToInt(Size.y * height);
 
         foreach (var voxel in _currentSelection)
         {
@@ -196,7 +201,7 @@ public class VoxelGrid
         if (transparent) textureFormat = TextureFormat.RGBA32;
         else textureFormat = TextureFormat.RGB24;
 
-        Texture2D gridImage = new Texture2D(GridSize.x, GridSize.z, textureFormat, true, true);
+        Texture2D gridImage = new Texture2D(Size.x, Size.z, textureFormat, true, true);
 
         for (int i = 0; i < gridImage.width; i++)
         {
@@ -220,41 +225,58 @@ public class VoxelGrid
         return gridImage;
     }
 
-    public void SetStatesFromImage(Texture2D image, int startY, int endY)
+    public void SetStatesFromImage(Texture2D image, float bottomLimit, float topLimit, int thickness, float sensitivity)
     {
+        int startY = Mathf.RoundToInt(bottomLimit * (Size.y - 1));
+        int endY = Mathf.RoundToInt(topLimit * (Size.y - 1));
         var resized = new Texture2D(image.width, image.height);
         resized.SetPixels(image.GetPixels());
         resized.Apply();
-        TextureScale.Point(resized, GridSize.x, GridSize.z);
+        TextureScale.Point(resized, Size.x, Size.z);
         // Iterate through the XZ plane
-        for (int x = 0; x < GridSize.x; x++)
+        for (int x = 0; x < Size.x; x++)
         {
-            for (int z = 0; z < GridSize.z; z++)
+            for (int z = 0; z < Size.z; z++)
             {
                 // Get the pixel color from the image
                 var pixel = resized.GetPixel(x, z);
 
                 // Check if pixel is red
-                if (pixel.r > pixel.g && pixel.a > 0.15)
+                if (pixel.r > pixel.g && pixel.r > pixel.b && pixel.grayscale < sensitivity)
                 {
+                    Color.RGBToHSV(pixel, out float h, out float s, out float v);
                     // Set respective color to voxel
-                    var y = Mathf.RoundToInt((endY - startY) * pixel.a) + startY;
+                    var y = Mathf.RoundToInt((endY - startY) * s) + startY;
                     Voxels[x, y, z].SetState(VoxelState.Red);
-                    for (int i = 1; i <= 2; i++)
+                    if (thickness > 0)
                     {
-                        Voxels[x, y - i, z].SetState(VoxelState.Red);
+                        for (int i = 1; i < thickness; i++)
+                        {
+                            int newY = y - i;
+                            if (newY >= 0 && newY < Size.y) Voxels[x, newY, z].SetState(VoxelState.Red);
+                        }
                     }
                 }
                 else if (pixel == Color.black)
                 {
-                    for (int y = 0; y < GridSize.y; y++)
+                    for (int y = 0; y < Size.y; y++)
                     {
                         Voxels[x, y, z].SetState(VoxelState.Black);
-                    }
-                    
+                    }  
                 }
             }
         }
+    }
+
+    public void UpdatePreview(Vector3 size)
+    {
+        _previewCube.transform.localScale = size * 1.01f;
+        _previewCube.transform.localPosition = size * 0.5f - Vector3.one * 0.5f;
+    }
+
+    public void ShowPreview(bool state)
+    {
+        _previewCube.SetActive(state);
     }
 
     #endregion
@@ -265,7 +287,7 @@ public class VoxelGrid
     {
         if (_allVoxels == null) _allVoxels = new Voxel[_maxSize.x, _maxSize.y, _maxSize.z];
 
-        Voxels = new Voxel[GridSize.x, GridSize.y, GridSize.z];
+        Voxels = new Voxel[Size.x, Size.y, Size.z];
 
         for (int x = 0; x < _maxSize.x; x++)
         {
@@ -282,7 +304,7 @@ public class VoxelGrid
                         //state: y == 0 ? VoxelState.White : VoxelState.Empty,
                         parent: _parent,
                         sizeFactor: 0.96f);
-                    if (Util.IsInsideGrid(index, GridSize))
+                    if (Util.IsInsideGrid(index, Size))
                     {
                         Voxels[x, y, z] = _allVoxels[x, y, z];
                         Voxels[x, y, z].SetState(y == 0 ? VoxelState.White : VoxelState.Empty);
@@ -304,7 +326,7 @@ public class VoxelGrid
             for (int j = 0; j < 2; j++)
             {
                 secondCorner = new Vector3Int(origin.x + xDirections[i] * size.x, origin.y + size.y, origin.z + zDirections[j] * size.z);
-                if (secondCorner.IsInsideGrid(GridSize)) return secondCorner;
+                if (secondCorner.IsInsideGrid(Size)) return secondCorner;
             }
         }
         return secondCorner;
@@ -320,29 +342,29 @@ public class VoxelGrid
     private void MakeFaces()
     {
         // make faces
-        Faces[0] = new Face[GridSize.x + 1, GridSize.y, GridSize.z];
+        Faces[0] = new Face[Size.x + 1, Size.y, Size.z];
 
-        for (int x = 0; x < GridSize.x + 1; x++)
-            for (int y = 0; y < GridSize.y; y++)
-                for (int z = 0; z < GridSize.z; z++)
+        for (int x = 0; x < Size.x + 1; x++)
+            for (int y = 0; y < Size.y; y++)
+                for (int z = 0; z < Size.z; z++)
                 {
                     Faces[0][x, y, z] = new Face(x, y, z, Axis.X, this);
                 }
 
-        Faces[1] = new Face[GridSize.x, GridSize.y + 1, GridSize.z];
+        Faces[1] = new Face[Size.x, Size.y + 1, Size.z];
 
-        for (int x = 0; x < GridSize.x; x++)
-            for (int y = 0; y < GridSize.y + 1; y++)
-                for (int z = 0; z < GridSize.z; z++)
+        for (int x = 0; x < Size.x; x++)
+            for (int y = 0; y < Size.y + 1; y++)
+                for (int z = 0; z < Size.z; z++)
                 {
                     Faces[1][x, y, z] = new Face(x, y, z, Axis.Y, this);
                 }
 
-        Faces[2] = new Face[GridSize.x, GridSize.y, GridSize.z + 1];
+        Faces[2] = new Face[Size.x, Size.y, Size.z + 1];
 
-        for (int x = 0; x < GridSize.x; x++)
-            for (int y = 0; y < GridSize.y; y++)
-                for (int z = 0; z < GridSize.z + 1; z++)
+        for (int x = 0; x < Size.x; x++)
+            for (int y = 0; y < Size.y; y++)
+                for (int z = 0; z < Size.z + 1; z++)
                 {
                     Faces[2][x, y, z] = new Face(x, y, z, Axis.Z, this);
                 }
@@ -353,29 +375,29 @@ public class VoxelGrid
     /// </summary>
     private void MakeEdges()
     {
-        Edges[2] = new Edge[GridSize.x + 1, GridSize.y + 1, GridSize.z];
+        Edges[2] = new Edge[Size.x + 1, Size.y + 1, Size.z];
 
-        for (int x = 0; x < GridSize.x + 1; x++)
-            for (int y = 0; y < GridSize.y + 1; y++)
-                for (int z = 0; z < GridSize.z; z++)
+        for (int x = 0; x < Size.x + 1; x++)
+            for (int y = 0; y < Size.y + 1; y++)
+                for (int z = 0; z < Size.z; z++)
                 {
                     Edges[2][x, y, z] = new Edge(x, y, z, Axis.Z, this);
                 }
 
-        Edges[0] = new Edge[GridSize.x, GridSize.y + 1, GridSize.z + 1];
+        Edges[0] = new Edge[Size.x, Size.y + 1, Size.z + 1];
 
-        for (int x = 0; x < GridSize.x; x++)
-            for (int y = 0; y < GridSize.y + 1; y++)
-                for (int z = 0; z < GridSize.z + 1; z++)
+        for (int x = 0; x < Size.x; x++)
+            for (int y = 0; y < Size.y + 1; y++)
+                for (int z = 0; z < Size.z + 1; z++)
                 {
                     Edges[0][x, y, z] = new Edge(x, y, z, Axis.X, this);
                 }
 
-        Edges[1] = new Edge[GridSize.x + 1, GridSize.y, GridSize.z + 1];
+        Edges[1] = new Edge[Size.x + 1, Size.y, Size.z + 1];
 
-        for (int x = 0; x < GridSize.x + 1; x++)
-            for (int y = 0; y < GridSize.y; y++)
-                for (int z = 0; z < GridSize.z + 1; z++)
+        for (int x = 0; x < Size.x + 1; x++)
+            for (int y = 0; y < Size.y; y++)
+                for (int z = 0; z < Size.z + 1; z++)
                 {
                     Edges[1][x, y, z] = new Edge(x, y, z, Axis.Y, this);
                 }
@@ -413,9 +435,9 @@ public class VoxelGrid
     /// <returns>All the Voxels</returns>
     public IEnumerable<Voxel> GetVoxels()
     {
-        for (int x = 0; x < GridSize.x; x++)
-            for (int y = 0; y < GridSize.y; y++)
-                for (int z = 0; z < GridSize.z; z++)
+        for (int x = 0; x < Size.x; x++)
+            for (int y = 0; y < Size.y; y++)
+                for (int z = 0; z < Size.z; z++)
                 {
                     yield return Voxels[x, y, z];
                 }

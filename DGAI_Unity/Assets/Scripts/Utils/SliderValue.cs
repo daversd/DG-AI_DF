@@ -14,6 +14,11 @@ public class SliderValue : MonoBehaviour
     }
     public void UpdateText(float val)
     {
-        GetComponent<TextMeshProUGUI>().text = val.ToString();
+        _component.text = val.ToString();
+    }
+
+    public void UpdateTextWithPrecision(float val)
+    {
+        _component.text = val.ToString("N3");
     }
 }

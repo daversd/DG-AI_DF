@@ -21,6 +21,15 @@ public class EnvironmentManager : MonoBehaviour
     [SerializeField]
     Slider _sliderZ;
 
+    [SerializeField]
+    Slider _sliderStart;
+    [SerializeField]
+    Slider _sliderEnd;
+    [SerializeField]
+    Slider _sliderThickness;
+    [SerializeField]
+    Slider _sliderSensitivity;
+
     public GameObject MouseTag;
     
 
@@ -54,11 +63,6 @@ public class EnvironmentManager : MonoBehaviour
 
             ImageReadWrite.SaveImage(resized, "Images/test");
         }
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            var img = Resources.Load<Texture2D>("Data/map");
-            _grid.SetStatesFromImage(img, 1, 9);
-        }
         if (Input.GetKeyDown(KeyCode.C))
         {
             var path = Path.Combine(Directory.GetCurrentDirectory(), "Images/test.csv");
@@ -66,18 +70,19 @@ public class EnvironmentManager : MonoBehaviour
             //var img = Resources.Load<Texture2D>("Data/map");
             //_grid.SetStatesFromImage(img, 1, 9);
         }
+
     }
 
     private void CreateRandomBox(int minX, int maxX, int minZ, int maxZ)
     {
-        var oX = Random.Range(0, _grid.GridSize.x);
-        var oY = Random.Range(0, _grid.GridSize.y);
-        var oZ = Random.Range(0, _grid.GridSize.z);
+        var oX = Random.Range(0, _grid.Size.x);
+        var oY = Random.Range(0, _grid.Size.y);
+        var oZ = Random.Range(0, _grid.Size.z);
 
         var origin = new Vector3Int(oX, 0, oZ);
 
         var sizeX = Random.Range(minX, maxX);
-        var sizeY = Random.Range(3, _grid.GridSize.y);
+        var sizeY = Random.Range(3, _grid.Size.y);
         var sizeZ = Random.Range(minZ, maxZ);
         var size = new Vector3Int(sizeX, sizeY, sizeZ);
         _grid.RectangleFromCorner(_grid.Voxels[origin.x, origin.y, origin.z], size);
@@ -141,12 +146,12 @@ public class EnvironmentManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Period))
         {
-            _height = Mathf.Clamp(_height + 1, 1, _grid.GridSize.y);
+            _height = Mathf.Clamp(_height + 1, 1, _grid.Size.y);
             MouseTag.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = _height.ToString();
         }
         if (Input.GetKeyDown(KeyCode.Comma))
         {
-            _height = Mathf.Clamp(_height - 1, 1, _grid.GridSize.y);
+            _height = Mathf.Clamp(_height - 1, 1, _grid.Size.y);
             MouseTag.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = _height.ToString();
         }
     }
@@ -155,5 +160,19 @@ public class EnvironmentManager : MonoBehaviour
     {
         _height = Mathf.Clamp(_height, 1, (int)_sliderY.value);
         _grid.ChangeGridSize(new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value));
+        _grid.ShowPreview(false);
+    }
+
+    public void PreviewGridSize()
+    {
+        _grid.ShowPreview(true);
+        _grid.UpdatePreview(new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value));
+    }
+
+    public void ReadImage()
+    {
+        var img = Resources.Load<Texture2D>("Data/map");
+        _grid.ClearGrid();
+        _grid.SetStatesFromImage(img, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
     }
 }
