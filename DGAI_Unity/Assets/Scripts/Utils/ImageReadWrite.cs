@@ -84,9 +84,9 @@ public static class ImageReadWrite
     /// </summary>
     /// <param name="image"></param>
     /// <param name="fileName"></param>
-    public static void SaveImage(Texture2D image, string fileName)
+    public static void SaveImage(Texture2D image, string filePath)
     {
-        string filePath = _folder + $"/{fileName}" + ".png";
+        //string filePath = _folder + $"/{fileName}" + ".png";
         byte[] data = image.EncodeToPNG();
         string path = Path.GetDirectoryName(filePath);
         if (!Directory.Exists(path))

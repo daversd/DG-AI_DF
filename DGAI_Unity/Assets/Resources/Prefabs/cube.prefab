@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3242513492461818950}
   - component: {fileID: 3399958713301843996}
   - component: {fileID: 5490427121014926468}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: cube
   m_TagString: Voxel
   m_Icon: {fileID: 0}

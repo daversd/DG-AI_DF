@@ -14,6 +14,8 @@ public class EnvironmentManager : MonoBehaviour
     Voxel[] _corners;
     AppStage _stage;
     int _height;
+    int _seed = 666;
+
     [SerializeField]
     Slider _sliderX;
     [SerializeField]
@@ -29,6 +31,8 @@ public class EnvironmentManager : MonoBehaviour
     Slider _sliderThickness;
     [SerializeField]
     Slider _sliderSensitivity;
+    [SerializeField]
+    TMP_InputField _inputName;
 
     public GameObject MouseTag;
     
@@ -36,6 +40,7 @@ public class EnvironmentManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Random.InitState(_seed);
         MouseTag.SetActive(false);
         _stage = AppStage.Neutral;
         _corners = new Voxel[2];
@@ -50,33 +55,12 @@ public class EnvironmentManager : MonoBehaviour
     {
         HandleDrawing();
         HandleHeight();
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            PopulateRandomBoxes(10, 10, 15, 10, 15);
-        }
         if (Input.GetKeyDown(KeyCode.R)) _grid.ClearGrid();
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            var image = _grid.ImageFromGrid(transparent: true);
-            var resized = ImageReadWrite.Resize256(image, Color.white);
-
-            ImageReadWrite.SaveImage(resized, "Images/test");
-        }
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "Images/test.csv");
-            Util.SaveVoxels(_grid, new List<VoxelState>() { VoxelState.Red, VoxelState.Black }, path);
-            //var img = Resources.Load<Texture2D>("Data/map");
-            //_grid.SetStatesFromImage(img, 1, 9);
-        }
-
     }
 
     private void CreateRandomBox(int minX, int maxX, int minZ, int maxZ)
     {
         var oX = Random.Range(0, _grid.Size.x);
-        var oY = Random.Range(0, _grid.Size.y);
         var oZ = Random.Range(0, _grid.Size.z);
 
         var origin = new Vector3Int(oX, 0, oZ);
@@ -96,6 +80,24 @@ public class EnvironmentManager : MonoBehaviour
         }
     }
 
+    public void PopulateBoxesAndSave(int samples, int minQuantity, int maxQuantity, int minX, int maxX, int minZ, int maxZ)
+    {
+        string directory = Path.Combine(Directory.GetCurrentDirectory(), "Samples");
+        if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+        for (int i = 0; i < samples; i++)
+        {
+            _grid.ClearGrid();
+            int quantity = Random.Range(minQuantity, maxQuantity);
+            PopulateRandomBoxes(quantity, minX, maxX, minZ, maxZ);
+
+            var image = _grid.ImageFromGrid(transparent: true);
+            var resized = ImageReadWrite.Resize256(image, Color.white);
+
+            var fileName = Path.Combine(directory, $"sample_{i.ToString("D4")}.png");
+            ImageReadWrite.SaveImage(resized, fileName);
+        }
+    }
+
     private void HandleDrawing()
     {
         if (Input.GetMouseButton(0))
@@ -107,7 +109,7 @@ public class EnvironmentManager : MonoBehaviour
                 if (hit.transform.CompareTag("Voxel"))
                 {
                     Voxel voxel = hit.transform.GetComponent<VoxelTrigger>().Voxel;
-                    if (voxel.State == VoxelState.White)
+                    if (voxel.State == VoxelState.White || voxel.State == VoxelState.Yellow)
                     {
                         if (_stage == AppStage.Neutral)
                         {
@@ -174,5 +176,23 @@ public class EnvironmentManager : MonoBehaviour
         var img = Resources.Load<Texture2D>("Data/map");
         _grid.ClearGrid();
         _grid.SetStatesFromImage(img, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
+    }
+
+    public void SaveGrid()
+    {
+        if (_inputName.text == "")
+        {
+            Debug.Log("Não é possível salvar arquivo sem nome!");
+            return;
+        }
+        var directory = Path.Combine(Directory.GetCurrentDirectory(), $"Grids");
+        if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"{_inputName.text}.csv");
+        Util.SaveVoxels(_grid, new List<VoxelState>() { VoxelState.Red, VoxelState.Black }, path);
+    }
+
+    public void GenerateSampleSet()
+    {
+        PopulateBoxesAndSave(500, 3, 10, 3, 10, 3, 10);
     }
 }
