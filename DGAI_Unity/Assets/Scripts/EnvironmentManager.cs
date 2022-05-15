@@ -16,6 +16,9 @@ public class EnvironmentManager : MonoBehaviour
     int _height;
     int _seed = 666;
 
+    Dictionary<int, Texture2D> _sourceImages;
+    Texture2D _sourceImage;
+
     [SerializeField]
     Slider _sliderX;
     [SerializeField]
@@ -33,6 +36,8 @@ public class EnvironmentManager : MonoBehaviour
     Slider _sliderSensitivity;
     [SerializeField]
     TMP_InputField _inputName;
+    [SerializeField]
+    TMP_Dropdown _sourceDropdown;
 
     public GameObject MouseTag;
     
@@ -40,6 +45,8 @@ public class EnvironmentManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        SetDropdownSources();
+
         Random.InitState(_seed);
         MouseTag.SetActive(false);
         _stage = AppStage.Neutral;
@@ -173,9 +180,9 @@ public class EnvironmentManager : MonoBehaviour
 
     public void ReadImage()
     {
-        var img = Resources.Load<Texture2D>("Data/map");
+        //var img = Resources.Load<Texture2D>("Data/map");
         _grid.ClearGrid();
-        _grid.SetStatesFromImage(img, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
+        _grid.SetStatesFromImage(_sourceImage, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
     }
 
     public void SaveGrid()
@@ -189,10 +196,43 @@ public class EnvironmentManager : MonoBehaviour
         if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, $"{_inputName.text}.csv");
         Util.SaveVoxels(_grid, new List<VoxelState>() { VoxelState.Red, VoxelState.Black }, path);
+
+        //foreach (var key in _sourceImages.Keys)
+        //{
+        //    var name = $"grid {key}";
+        //    var image = _sourceImages[key];
+        //    _grid.ClearGrid();
+        //    _grid.SetStatesFromImage(image, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
+        //    var directory = Path.Combine(Directory.GetCurrentDirectory(), $"Grids");
+        //    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+        //    var path = Path.Combine(directory, $"{name}.csv");
+        //    Util.SaveVoxels(_grid, new List<VoxelState>() { VoxelState.Red, VoxelState.Black }, path);
+        //}
     }
 
     public void GenerateSampleSet()
     {
         PopulateBoxesAndSave(500, 3, 10, 3, 10, 3, 10);
+    }
+
+    public void SetDropdownSources()
+    {
+        _sourceDropdown.ClearOptions();
+        _sourceImages = new Dictionary<int, Texture2D>();
+        var images = Resources.LoadAll<Texture2D>("Data");
+        List<string> names = new List<string>();
+        for (int i = 0; i < images.Length; i++)
+        {
+            _sourceImages.Add(i, images[i]);
+            names.Add($"image {i}");
+        }
+        _sourceDropdown.AddOptions(names);
+        _sourceImage = images[0];
+        _sourceDropdown.value = 0;
+    }
+
+    public void UpdateCurrentImage()
+    {
+        _sourceImage = _sourceImages[_sourceDropdown.value];
     }
 }
