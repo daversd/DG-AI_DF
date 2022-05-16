@@ -17,6 +17,7 @@ public class EnvironmentManager : MonoBehaviour
     int _seed = 666;
 
     Dictionary<int, Texture2D> _sourceImages;
+    Dictionary<int, Texture2D> _outputImages;
     Texture2D _sourceImage;
 
     [SerializeField]
@@ -40,7 +41,7 @@ public class EnvironmentManager : MonoBehaviour
     TMP_Dropdown _sourceDropdown;
 
     public GameObject MouseTag;
-    
+
 
     // Start is called before the first frame update
     void Start()
@@ -54,7 +55,7 @@ public class EnvironmentManager : MonoBehaviour
         var gridSize = new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value);
         _height = gridSize.y;
         var maxSize = new Vector3Int((int)_sliderX.maxValue, (int)_sliderY.maxValue, (int)_sliderZ.maxValue);
-        _grid = new VoxelGrid(gridSize, maxSize,transform.position, 1f, transform);
+        _grid = new VoxelGrid(gridSize, maxSize, transform.position, 1f, transform);
     }
 
     // Update is called once per frame

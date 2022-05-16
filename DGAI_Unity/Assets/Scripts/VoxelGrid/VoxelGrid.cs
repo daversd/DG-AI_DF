@@ -247,19 +247,21 @@ public class VoxelGrid
                     Color.RGBToHSV(pixel, out float h, out float s, out float v);
                     // Set respective color to voxel
                     var y = Mathf.RoundToInt((endY - startY) * s) + startY;
+                    if (y == 0) break;
                     Voxels[x, y, z].SetState(VoxelState.Red);
                     if (thickness > 0)
                     {
                         for (int i = 1; i < thickness; i++)
                         {
                             int newY = y - i;
+                            if (newY == 0) break;
                             if (newY >= 0 && newY < Size.y) Voxels[x, newY, z].SetState(VoxelState.Red);
                         }
                     }
                 }
                 else if (pixel == Color.black)
                 {
-                    for (int y = 0; y < Size.y; y++)
+                    for (int y = 1; y < Size.y; y++)
                     {
                         Voxels[x, y, z].SetState(VoxelState.Black);
                     }  
