@@ -16,6 +16,8 @@ public class EnvironmentManager : MonoBehaviour
     int _height;
     int _seed = 666;
 
+    Pix2Pix _pix2pix;
+
     Dictionary<int, Texture2D> _sourceImages;
     Dictionary<int, Texture2D> _outputImages;
     Texture2D _sourceImage;
@@ -39,6 +41,10 @@ public class EnvironmentManager : MonoBehaviour
     TMP_InputField _inputName;
     [SerializeField]
     TMP_Dropdown _sourceDropdown;
+    [SerializeField]
+    Image _inputPreview;
+    [SerializeField]
+    Image _outputPreview;
 
     public GameObject MouseTag;
 
@@ -46,6 +52,8 @@ public class EnvironmentManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        _pix2pix = new Pix2Pix();
+
         SetDropdownSources();
 
         Random.InitState(_seed);
@@ -149,7 +157,24 @@ public class EnvironmentManager : MonoBehaviour
         {
             _grid.MakeBox(_height);
             _stage = AppStage.Neutral;
+            PredictAndUpdate();
         }
+    }
+
+    void PredictAndUpdate()
+    {
+        Debug.Log("predicting");
+        var image = _grid.ImageFromGrid();
+        
+        var resized = ImageReadWrite.Resize256(image, Color.white);
+        _sourceImage = _pix2pix.Predict(resized);
+        TextureScale.Point(_sourceImage, _grid.Size.x, _grid.Size.z);
+        _grid.SetStatesFromImage(_sourceImage, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
+
+        _inputPreview.sprite = Sprite.Create(resized, new Rect(0, 0, resized.width, resized.height), Vector2.one * 0.5f);
+        _outputPreview.sprite = Sprite.Create(_sourceImage, new Rect(0, 0, _sourceImage.width, _sourceImage.height), Vector2.one * 0.5f);
+        ImageReadWrite.SaveImage(_sourceImage, $"{Directory.GetCurrentDirectory()}/output.png");
+
     }
 
     private void HandleHeight()

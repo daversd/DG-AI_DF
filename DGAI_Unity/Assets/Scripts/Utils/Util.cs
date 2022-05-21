@@ -9,23 +9,6 @@ using UnityEngine;
 public enum Axis { X, Y, Z };
 public enum BoundaryType { Inside = 0, Left = -1, Right = 1, Outside = 2 }
 
-class Point3d
-{
-    public int X, Y, Z;
-
-    public Point3d(int x, int y, int z)
-    {
-        X = x;
-        Y = y;
-        Z = z;
-    }
-
-    public Point3d[] CullDuplicates(IEnumerable<Point3d> points, float tolerance)
-    {
-        return null;
-    }
-}
-
 static class Util
 {
     public static Vector3Int[] XZDirections =
@@ -112,90 +95,11 @@ static class Util
         return copy.OrderBy(t => UnityEngine.Random.value).ToList();
     }
 
-
-
-    static void CreateCurves(List<Point3d> points, List<int> heights)
+    public static float Normalise(float v, float a1, float a2, float b1, float b2)
     {
-        List<Point3d>[] curves = new List<Point3d>[heights.Count];
+        float result = b1 + (v - a1) * (b2 - b1) / (a2 - a1);
 
-        for (int i = 0; i < heights.Count; i++)
-        {
-            var levelPoints = points.Where(p => p.Z >= i);
-            curves[i] = levelPoints.Select(p => new Point3d(p.X, p.Y, i)).ToList();
-        }
-
-        for (int i = 0; i < curves.Length; i++)
-        {
-            var curve = curves[i];
-
-            var groupsX = curve.GroupBy(p => p.X).ToDictionary(g => g.Key, g => g.ToList());
-            var groupsY = curve.GroupBy(p => p.Y).ToDictionary(g => g.Key, g => g.ToList());
-            List<Point3d> border = new List<Point3d>();
-            foreach (var group in groupsX)
-            {
-                var list = group.Value;
-                var ordered = list.OrderBy(p => p.Y).ToArray();
-                for (int j = 0; j < ordered.Length; j++)
-                {
-                    var current = ordered[j];
-                    Point3d next;
-                    Point3d previous;
-                    if (j - 1 >= 0)
-                    {
-                        previous = ordered[j - 1];
-                        if (current.Y - previous.Y == 1)
-                        {
-                            if (j + 1 < ordered.Length)
-                            {
-                                next = ordered[j + 1];
-                                if (next.Y - current.Y != 1)
-                                {
-                                    border.Add(current);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            border.Add(current);
-                        }
-                    }
-                }
-            }
-
-            foreach (var group in groupsY)
-            {
-                var list = group.Value;
-                var ordered = list.OrderBy(p => p.X).ToArray();
-                for (int j = 0; j < ordered.Length; j++)
-                {
-                    var current = ordered[j];
-                    Point3d next;
-                    Point3d previous;
-                    if (j - 1 >= 0)
-                    {
-                        previous = ordered[j - 1];
-                        if (current.Y - previous.Y == 1)
-                        {
-                            if (j + 1 < ordered.Length)
-                            {
-                                next = ordered[j + 1];
-                                if (next.Y - current.Y != 1)
-                                {
-                                    border.Add(current);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            border.Add(current);
-                        }
-                    }
-                }
-            }
-        }
+        return result;
     }
-
-
-
 
 }
