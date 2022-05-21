@@ -63,7 +63,7 @@ public class EnvironmentManager : MonoBehaviour
     {
         HandleDrawing();
         HandleHeight();
-        if (Input.GetKeyDown(KeyCode.R)) _grid.ClearGrid();
+        if (Input.GetKeyDown(KeyCode.C)) _grid.ClearGrid();
     }
 
     private void CreateRandomBox(int minX, int maxX, int minZ, int maxZ)
