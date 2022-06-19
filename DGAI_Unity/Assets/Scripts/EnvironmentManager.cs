@@ -19,50 +19,28 @@ public class EnvironmentManager : MonoBehaviour
     Pix2Pix _pix2pix;
 
     Dictionary<int, Texture2D> _sourceImages;
-    Dictionary<int, Texture2D> _outputImages;
     Texture2D _sourceImage;
 
-    [SerializeField]
-    Slider _sliderX;
-    [SerializeField]
-    Slider _sliderY;
-    [SerializeField]
-    Slider _sliderZ;
+    UIManager _uiManager;
 
-    [SerializeField]
-    Slider _sliderStart;
-    [SerializeField]
-    Slider _sliderEnd;
-    [SerializeField]
-    Slider _sliderThickness;
-    [SerializeField]
-    Slider _sliderSensitivity;
-    [SerializeField]
-    TMP_InputField _inputName;
-    [SerializeField]
-    TMP_Dropdown _sourceDropdown;
-    [SerializeField]
-    Image _inputPreview;
-    [SerializeField]
-    Image _outputPreview;
-
-    public GameObject MouseTag;
+    
 
 
     // Start is called before the first frame update
     void Start()
     {
+        _uiManager = GameObject.Find("UIManager").transform.GetComponent<UIManager>();
+        if (_uiManager == null) Debug.LogError("UIManager não foi encontrado!");
         _pix2pix = new Pix2Pix();
 
-        SetDropdownSources();
+        _sourceImage = _uiManager.SetDropdownSources();
 
         Random.InitState(_seed);
-        MouseTag.SetActive(false);
         _stage = AppStage.Neutral;
         _corners = new Voxel[2];
-        var gridSize = new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value);
+        var gridSize = _uiManager.GridSize;
         _height = gridSize.y;
-        var maxSize = new Vector3Int((int)_sliderX.maxValue, (int)_sliderY.maxValue, (int)_sliderZ.maxValue);
+        var maxSize = _uiManager.MaxGridSize;
         _grid = new VoxelGrid(gridSize, maxSize, transform.position, 1f, transform);
     }
 
@@ -72,6 +50,13 @@ public class EnvironmentManager : MonoBehaviour
         HandleDrawing();
         HandleHeight();
         if (Input.GetKeyDown(KeyCode.C)) _grid.ClearGrid();
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            _grid.ClearGrid();
+            PopulateRandomBoxes(Random.Range(3, 10), 5, 15, 5, 15);
+            var image = _grid.ImageFromGrid();
+            _uiManager.SetInputImage(Sprite.Create(image, new Rect(0, 0, image.width, image.height), Vector2.one * 0.5f));
+        }
     }
 
     private void CreateRandomBox(int minX, int maxX, int minZ, int maxZ)
@@ -129,8 +114,7 @@ public class EnvironmentManager : MonoBehaviour
                     {
                         if (_stage == AppStage.Neutral)
                         {
-                            MouseTag.SetActive(true);
-                            MouseTag.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = _height.ToString();
+                            _uiManager.SetMouseTagText(_height.ToString());
                             _stage = AppStage.Selecting;
                             _corners[0] = voxel;
                             voxel.SetState(VoxelState.Black);
@@ -146,12 +130,12 @@ public class EnvironmentManager : MonoBehaviour
         }
         if (_stage == AppStage.Selecting)
         {
-            MouseTag.transform.position = Input.mousePosition + new Vector3(50, 0, 15);
+            _uiManager.SetMouseTagPosition(Input.mousePosition + new Vector3(50, 0, 15));
         }
         if (Input.GetMouseButtonUp(0))
         {
-            _stage = AppStage.Done;
-            MouseTag.SetActive(false);
+            if (_stage == AppStage.Selecting) _stage = AppStage.Done;
+            _uiManager.HideMouseTag();
         }
         if (_stage == AppStage.Done)
         {
@@ -161,19 +145,18 @@ public class EnvironmentManager : MonoBehaviour
         }
     }
 
-    void PredictAndUpdate()
+    public void PredictAndUpdate()
     {
-        Debug.Log("predicting");
+        _grid.ClearReds();
         var image = _grid.ImageFromGrid();
         
         var resized = ImageReadWrite.Resize256(image, Color.white);
         _sourceImage = _pix2pix.Predict(resized);
         TextureScale.Point(_sourceImage, _grid.Size.x, _grid.Size.z);
-        _grid.SetStatesFromImage(_sourceImage, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
+        UpdateReds();
 
-        _inputPreview.sprite = Sprite.Create(resized, new Rect(0, 0, resized.width, resized.height), Vector2.one * 0.5f);
-        _outputPreview.sprite = Sprite.Create(_sourceImage, new Rect(0, 0, _sourceImage.width, _sourceImage.height), Vector2.one * 0.5f);
-        ImageReadWrite.SaveImage(_sourceImage, $"{Directory.GetCurrentDirectory()}/output.png");
+        _uiManager.SetInputImage(Sprite.Create(resized, new Rect(0, 0, resized.width, resized.height), Vector2.one * 0.5f));
+        _uiManager.SetOutputImage(Sprite.Create(_sourceImage, new Rect(0, 0, _sourceImage.width, _sourceImage.height), Vector2.one * 0.5f));
 
     }
 
@@ -182,45 +165,65 @@ public class EnvironmentManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Period))
         {
             _height = Mathf.Clamp(_height + 1, 1, _grid.Size.y);
-            MouseTag.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = _height.ToString();
+            _uiManager.SetMouseTagText(_height.ToString());
         }
         if (Input.GetKeyDown(KeyCode.Comma))
         {
             _height = Mathf.Clamp(_height - 1, 1, _grid.Size.y);
-            MouseTag.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = _height.ToString();
+            _uiManager.SetMouseTagText(_height.ToString());
         }
     }
 
-    public void UpdateGridSize()
+    public void UpdateGridSize(Vector3Int newSize)
     {
-        _height = Mathf.Clamp(_height, 1, (int)_sliderY.value);
-        _grid.ChangeGridSize(new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value));
+        _height = Mathf.Clamp(_height, 1, newSize.y);
+        _grid.ChangeGridSize(newSize);
         _grid.ShowPreview(false);
     }
 
-    public void PreviewGridSize()
+    public void PreviewGridSize(Vector3Int newSize)
     {
         _grid.ShowPreview(true);
-        _grid.UpdatePreview(new Vector3Int((int)_sliderX.value, (int)_sliderY.value, (int)_sliderZ.value));
+        _grid.UpdatePreview(newSize);
     }
 
     public void ReadImage()
     {
-        //var img = Resources.Load<Texture2D>("Data/map");
         _grid.ClearGrid();
-        _grid.SetStatesFromImage(_sourceImage, _sliderStart.value, _sliderEnd.value, (int)_sliderThickness.value, _sliderSensitivity.value);
+        _grid.SetStatesFromImage(
+            _sourceImage, 
+            _uiManager.GetSturctureBase(), 
+            _uiManager.GetSturctureTop(), 
+            _uiManager.GetSturctureThickness(), 
+            _uiManager.GetSturctureSensitivity());
     }
 
-    public void SaveGrid()
+    public void UpdateReds()
     {
-        if (_inputName.text == "")
+        _grid.ClearReds();
+        _grid.SetStatesFromImage(_sourceImage, 
+            _uiManager.GetSturctureBase(),
+            _uiManager.GetSturctureTop(),
+            _uiManager.GetSturctureThickness(),
+            _uiManager.GetSturctureSensitivity(), 
+            setBlacks: false);
+    }
+
+    public void ClearGrid()
+    {
+        _grid.ClearGrid();
+    }
+
+    public void SaveGrid(string name)
+    {
+        if (name == "")
         {
             Debug.Log("Não é possível salvar arquivo sem nome!");
             return;
         }
         var directory = Path.Combine(Directory.GetCurrentDirectory(), $"Grids");
         if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, $"{_inputName.text}.csv");
+        var path = Path.Combine(directory, $"{name}.csv");
         Util.SaveVoxels(_grid, new List<VoxelState>() { VoxelState.Red, VoxelState.Black }, path);
 
         //foreach (var key in _sourceImages.Keys)
@@ -241,24 +244,8 @@ public class EnvironmentManager : MonoBehaviour
         PopulateBoxesAndSave(500, 3, 10, 3, 10, 3, 10);
     }
 
-    public void SetDropdownSources()
-    {
-        _sourceDropdown.ClearOptions();
-        _sourceImages = new Dictionary<int, Texture2D>();
-        var images = Resources.LoadAll<Texture2D>("Data");
-        List<string> names = new List<string>();
-        for (int i = 0; i < images.Length; i++)
-        {
-            _sourceImages.Add(i, images[i]);
-            names.Add($"image {i}");
-        }
-        _sourceDropdown.AddOptions(names);
-        _sourceImage = images[0];
-        _sourceDropdown.value = 0;
-    }
-
     public void UpdateCurrentImage()
     {
-        _sourceImage = _sourceImages[_sourceDropdown.value];
+        _sourceImage = _uiManager.GetCurrentImage();
     }
 }

@@ -189,6 +189,19 @@ public class VoxelGrid
         }
     }
 
+    public void ClearReds()
+    {
+        foreach (Voxel voxel in Voxels)
+        {
+            if (voxel.State == VoxelState.Red)
+            {
+                if (voxel.Index.y == 0) voxel.SetState(VoxelState.White);
+                else voxel.SetState(VoxelState.Empty);
+            }
+            
+        }
+    }
+
     /// <summary>
     /// Get an image from the grid at the selected layer
     /// using the <see cref="VoxelState"/> of the voxels
@@ -225,7 +238,7 @@ public class VoxelGrid
         return gridImage;
     }
 
-    public void SetStatesFromImage(Texture2D image, float bottomLimit, float topLimit, int thickness, float sensitivity)
+    public void SetStatesFromImage(Texture2D image, float bottomLimit, float topLimit, int thickness, float sensitivity, bool setBlacks = false)
     {
         int startY = Mathf.RoundToInt(bottomLimit * (Size.y - 1));
         int endY = Mathf.RoundToInt(topLimit * (Size.y - 1));
@@ -259,7 +272,7 @@ public class VoxelGrid
                         }
                     }
                 }
-                else if (pixel == Color.black)
+                else if (setBlacks && pixel == Color.black)
                 {
                     for (int y = 1; y < Size.y; y++)
                     {
