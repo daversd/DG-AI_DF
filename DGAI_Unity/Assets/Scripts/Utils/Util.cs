@@ -4,11 +4,13 @@ using System.Linq;
 using System.IO;
 using UnityEngine;
 
-//Copied from Vicente Soler https://github.com/ADRC4/Voxel/blob/master/Assets/Scripts/Util/Util.cs
+//Adaptado de Vicente Soler https://github.com/ADRC4/Voxel/blob/master/Assets/Scripts/Util/Util.cs
 
 public enum Axis { X, Y, Z };
-public enum BoundaryType { Inside = 0, Left = -1, Right = 1, Outside = 2 }
 
+/// <summary>
+/// Classe estática com funções auxiliares
+/// </summary>
 static class Util
 {
     public static Vector3Int[] XZDirections =
@@ -20,7 +22,7 @@ static class Util
     };
 
     /// <summary>
-    /// Save the voxels of the input grid that pass the input filter to the designated path
+    /// Salva os voxels de um grid que obedecem os <see cref="VoxelState"/> do filtro para o caminho definido
     /// </summary>
     /// <param name="grid"></param>
     /// <param name="filter"></param>
@@ -84,7 +86,7 @@ static class Util
     }
 
     /// <summary>
-    /// Returns a shuffled copy of the input grid
+    /// Retoruna uma cópia embaralhada da lista
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
@@ -95,6 +97,15 @@ static class Util
         return copy.OrderBy(t => UnityEngine.Random.value).ToList();
     }
 
+    /// <summary>
+    /// Normaliza um valor de acordo os limites passados
+    /// </summary>
+    /// <param name="v">valor a ser normalizado</param>
+    /// <param name="a1">mínimo original</param>
+    /// <param name="a2">máximo original</param>
+    /// <param name="b1">mínimo objetivo</param>
+    /// <param name="b2">máximo objetivo</param>
+    /// <returns></returns>
     public static float Normalise(float v, float a1, float a2, float b1, float b2)
     {
         float result = b1 + (v - a1) * (b2 - b1) / (a2 - a1);

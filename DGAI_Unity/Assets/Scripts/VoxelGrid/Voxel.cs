@@ -3,10 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
+/// <summary>
+/// VoxelState representa o estado atual de um Voxel
+/// </summary>
 public enum VoxelState { White, Black, Red, Yellow, Empty, NotUsed };
+
+/// <summary>
+/// Voxel é uma estrutura tridimensional de informação. Sua forma não é
+/// necessariamente a de um cubo, mas comumente a é associado a tal forma
+/// </summary>
 public class Voxel : IEquatable<Voxel>
 {
-    #region Public fields
+    #region Campos públicos
 
     public Vector3Int Index;
     public List<Face> Faces = new List<Face>(6);
@@ -15,7 +23,7 @@ public class Voxel : IEquatable<Voxel>
 
     #endregion
 
-    #region Private fields
+    #region Campos privados
 
     VoxelGrid _voxelGrid;
     float _size;
@@ -23,14 +31,14 @@ public class Voxel : IEquatable<Voxel>
 
     #endregion
 
-    #region Contructors
+    #region Construtores
 
     /// <summary>
-    /// Creates a regular voxel on a voxel grid
+    /// Cria um Voxel em um <see cref="VoxelGrid"/>
     /// </summary>
-    /// <param name="index">The index of the Voxel</param>
-    /// <param name="voxelgrid">The <see cref="VoxelGrid"/> this <see cref="Voxel"/> is attached to</param>
-    /// <param name="voxelGameObject">The <see cref="GameObject"/> used on the Voxel</param>
+    /// <param name="index">O índice do Voxel</param>
+    /// <param name="voxelgrid">O <see cref="VoxelGrid"/> em que este <see cref="Voxel"/> está localizado</param>
+    /// <param name="voxelGameObject">O <see cref="GameObject"/> que representa este</param>
     public Voxel(Vector3Int index, VoxelGrid voxelGrid, GameObject prefab, VoxelState state = VoxelState.Empty, Transform parent = null, float sizeFactor = 1f)
     {
         Index = index;
@@ -45,17 +53,20 @@ public class Voxel : IEquatable<Voxel>
 
     #endregion
 
-    #region Public methods
+    #region Métodos públicos
 
+    /// <summary>
+    /// Destrói o <see cref="GameObject"/> associado a este <see cref="Voxel"/>
+    /// </summary>
     public void DestroyGO()
     {
         GameObject.Destroy(_voxelGO);
     }
 
     /// <summary>
-    /// Get the neighbouring voxels at each face, if it exists
+    /// Coleta os vizinhos deste <see cref="Voxel"/> em cada face, se o tiver
     /// </summary>
-    /// <returns>All neighbour voxels</returns>
+    /// <returns>Os voxels vizinhos</returns>
     public IEnumerable<Voxel> GetFaceNeighbours()
     {
         int x = Index.x;
@@ -73,6 +84,11 @@ public class Voxel : IEquatable<Voxel>
         if (z != 0) yield return _voxelGrid.Voxels[x, y, z - 1];
     }
 
+    /// <summary>
+    /// Coleta os vizinhos deste <see cref="Voxel"/> em cada face, se o tiver, em formato
+    /// de array de tamanho 6
+    /// </summary>
+    /// <returns></returns>
     public Voxel[] GetFaceNeighboursArray()
     {
         Voxel[] result = new Voxel[6];
@@ -103,14 +119,15 @@ public class Voxel : IEquatable<Voxel>
         return result;
     }
 
+    /// <summary>
+    /// Altera o estado deste voxel para um novo <see cref="VoxelState"/>
+    /// </summary>
+    /// <param name="newState"></param>
     public void SetState(VoxelState newState)
     {
-        // 28 Set the new state
         State = newState;
-        // 29 Get GO components
         var renderer = _voxelGO.GetComponent<MeshRenderer>();
         var collider = _voxelGO.GetComponent<Collider>();
-        // 30 Set properties for each state
         if (State == VoxelState.White)
         {
             renderer.enabled = true;
@@ -148,7 +165,7 @@ public class Voxel : IEquatable<Voxel>
     #region Equality checks
 
     /// <summary>
-    /// Checks if two Voxels are equal based on their Index
+    /// Verifica se dois voxels são iguais baseados em seus Index
     /// </summary>
     /// <param name="other">The <see cref="Voxel"/> to compare with</param>
     /// <returns>True if the Voxels are equal</returns>

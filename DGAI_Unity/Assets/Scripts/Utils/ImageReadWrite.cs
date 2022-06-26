@@ -5,13 +5,12 @@ using UnityEngine;
 
 public static class ImageReadWrite
 {
-    static string _folder = Directory.GetCurrentDirectory();
 
     /// <summary>
-    /// Resizes the input image to 256x256 pixels
+    /// Redimensiona uma imagem para 256x256 pixels
     /// </summary>
-    /// <param name="image">The input image</param>
-    /// <param name="border">The colour to be applied to the border if input is not square</param>
+    /// <param name="image">A imagem a ser redimensionada</param>
+    /// <param name="border">A cor da borda a ser aplicada caso a imagem de origem não seja quadrada</param>
     /// <returns>The resized <see cref="Texture2D"/></returns>
     public static Texture2D Resize256(Texture2D image, Color border)
     {
@@ -19,7 +18,6 @@ public static class ImageReadWrite
 
         if (image.width == image.height)
         {
-            // Image's ratio is 1:1, scale directly
             TextureScale.Point(image, 256, 256);
             image.Apply();
 
@@ -27,8 +25,6 @@ public static class ImageReadWrite
         }
         else
         {
-            // Image's ratio is not 1:1, scale according to bigger size
-            // Create output image with border colour pixels
             resultImage = new Texture2D(256, 256);
             Color[] borderPixels = new Color[256 * 256];
 
@@ -40,7 +36,6 @@ public static class ImageReadWrite
             resultImage.SetPixels(borderPixels);
             resultImage.Apply();
 
-            // Scale image preserving original ratio
             if (image.width > image.height)
             {
                 float ratio = image.height / (image.width * 1f);
@@ -60,7 +55,6 @@ public static class ImageReadWrite
                 image.Apply();
             }
 
-            // Apply scaled image to result
             for (int i = 0; i < image.width; i++)
             {
                 for (int j = 0; j < image.height; j++)
@@ -77,10 +71,9 @@ public static class ImageReadWrite
     }
 
     /// <summary>
-    /// Saves an image to disk to the specified file name
-    /// Format can be "pathA/.../file name" or "file name"
-    /// No extension or leading slash
-    /// If the target directory does not exist, it gets created
+    /// Salva uma imagem para o determinado caimnho e com o determinado nome
+    /// O formato pode ser "caminhoA/.../nomeDoArquivo.png" ou "nome do arquivo.png"
+    /// Se o caminho não existir, ele será criado.
     /// </summary>
     /// <param name="image"></param>
     /// <param name="fileName"></param>

@@ -4,22 +4,22 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
-
+/// <summary>
+/// Um grid tridimensional de <see cref="Voxel"/>
+/// </summary>
 public class VoxelGrid
 {
-    #region Public fields
+    #region Campos públicos
 
     public Vector3Int Size;
     public Voxel[,,] Voxels;
-    public Face[][,,] Faces = new Face[3][,,];
-    public Edge[][,,] Edges = new Edge[3][,,];
     public Vector3 Origin;
     public Vector3 Corner;
     public float VoxelSize { get; private set; }
 
-    #endregion Public fields
+    #endregion
 
-    #region Private fields
+    #region Campos privados
 
     Voxel[,,] _allVoxels;
     Vector3Int _maxSize;
@@ -32,9 +32,9 @@ public class VoxelGrid
 
     GameObject _previewCube;
 
-    #endregion Private fields
+    #endregion
 
-    #region Constructors
+    #region Construtores
 
     /// <summary>
     /// Constructor for a basic <see cref="VoxelGrid"/>
@@ -62,21 +62,22 @@ public class VoxelGrid
     }
 
 
-    #endregion Constructors
+    #endregion
 
-    #region Public methods
+    #region Métodos públicos
 
+    /// <summary>
+    /// Modifica o tamanho deste grid, ativando ou desativando os voxels necessários
+    /// </summary>
+    /// <param name="newSize"></param>
     public void ChangeGridSize(Vector3Int newSize)
     {
         Voxel[,,] tempVoxels = new Voxel[newSize.x, newSize.y, newSize.z];
 
-        int startX = newSize.x == Size.x ? 0 : Mathf.Min(Size.x - 1, newSize.x - 1);
         int endX = Mathf.Max(Size.x, newSize.x);
         
-        int startY = newSize.y == Size.y ? 0 : Mathf.Min(Size.y - 1, newSize.y - 1);
         int endY = Mathf.Max(Size.y, newSize.y);
-        
-        int startZ = newSize.z == Size.z ? 0 : Mathf.Min(Size.z - 1, newSize.z - 1);
+
         int endZ = Mathf.Max(Size.z, newSize.z);
 
 
@@ -113,6 +114,10 @@ public class VoxelGrid
         Size = newSize;
     }
 
+    /// <summary>
+    /// Define os cantos atuais da área de seleção
+    /// </summary>
+    /// <param name="corners"></param>
     public void SetCorners(Voxel[] corners)
     {
         _currentCorners = corners;
@@ -143,6 +148,10 @@ public class VoxelGrid
         }
     }
 
+    /// <summary>
+    /// Cria uma "caixa" de voxels a partir dos cantos atuais e com uma determinada altura
+    /// </summary>
+    /// <param name="height"></param>
     public void MakeBox(int height)
     {
         if (_currentSelection == null || _currentSelection.Count == 0) return;
@@ -162,7 +171,12 @@ public class VoxelGrid
         _currentSelection = new List<Voxel>();
     }
 
-    public void RectangleFromCorner(Voxel corner, Vector3Int size)
+    /// <summary>
+    /// Cria uma "caixa" de voxels a partir de um de seus cantos, com o tamanho indicado
+    /// </summary>
+    /// <param name="corner"></param>
+    /// <param name="size"></param>
+    public void BoxFromCorner(Voxel corner, Vector3Int size)
     {
         var c0 = corner.Index;
         var c1 = DiagonalCornerFromSize(corner.Index, size);
@@ -180,6 +194,9 @@ public class VoxelGrid
         }
     }
 
+    /// <summary>
+    /// Limpa o grid, reestabelecendo os <see cref="VoxelState"/> de todos seus voxels
+    /// </summary>
     public void ClearGrid()
     {
         foreach (Voxel voxel in Voxels)
@@ -189,6 +206,9 @@ public class VoxelGrid
         }
     }
 
+    /// <summary>
+    /// Limpa o grid, removendo os Voxels com VoxelState.Red
+    /// </summary>
     public void ClearReds()
     {
         foreach (Voxel voxel in Voxels)
@@ -203,11 +223,10 @@ public class VoxelGrid
     }
 
     /// <summary>
-    /// Get an image from the grid at the selected layer
-    /// using the <see cref="VoxelState"/> of the voxels
+    /// Cria uma imagem do grid a partir dos <see cref="VoxelState"/> de seus voxels
     /// </summary>
-    /// <param name="layer">Default layer set to 0</param>
-    /// <returns>The image with the colored states</returns>
+    /// <param name="layer">Layer padrão é 0</param>
+    /// <returns></returns>
     public Texture2D ImageFromGrid(int layer = 0, bool transparent = false)
     {
         TextureFormat textureFormat;
@@ -238,6 +257,16 @@ public class VoxelGrid
         return gridImage;
     }
 
+    /// <summary>
+    /// Define os <see cref="VoxelState"/> dos <see cref="Voxel"/> do grid a partir de uma imagem,
+    /// criando caixas para os pixels pretos, e a estrutura voxelizada para os pixels vermelhos
+    /// </summary>
+    /// <param name="image">A imagem de referência</param>
+    /// <param name="bottomLimit">A altura do limite inferior da estrutura</param>
+    /// <param name="topLimit">A altura do limite superior da estrutura</param>
+    /// <param name="thickness">A espessura da estura, ativando voxels extra</param>
+    /// <param name="sensitivity">A sensibilidade na leitura da imagem</param>
+    /// <param name="setBlacks">Define se os pixels pretos serão utilizados</param>
     public void SetStatesFromImage(Texture2D image, float bottomLimit, float topLimit, int thickness, float sensitivity, bool setBlacks = false)
     {
         int startY = Mathf.RoundToInt(bottomLimit * (Size.y - 1));
@@ -283,12 +312,20 @@ public class VoxelGrid
         }
     }
 
+    /// <summary>
+    /// Atualiza o preview do novo tamanho do grid
+    /// </summary>
+    /// <param name="size"></param>
     public void UpdatePreview(Vector3 size)
     {
         _previewCube.transform.localScale = size * 1.01f;
         _previewCube.transform.localPosition = size * 0.5f - Vector3.one * 0.5f;
     }
 
+    /// <summary>
+    /// Determina a visibilidade do preview do novo tamanho do grid
+    /// </summary>
+    /// <param name="state"></param>
     public void ShowPreview(bool state)
     {
         _previewCube.SetActive(state);
@@ -296,8 +333,11 @@ public class VoxelGrid
 
     #endregion
 
-    #region Private methods
+    #region Métodos privaods
 
+    /// <summary>
+    /// Cria os voxels do grid
+    /// </summary>
     void CreateVoxels()
     {
         if (_allVoxels == null) _allVoxels = new Voxel[_maxSize.x, _maxSize.y, _maxSize.z];
@@ -329,6 +369,12 @@ public class VoxelGrid
         }
     }
 
+    /// <summary>
+    /// Retorna o segundo canto possível a partir de uma origem e um tamanho
+    /// </summary>
+    /// <param name="origin"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
     Vector3Int DiagonalCornerFromSize(Vector3Int origin, Vector3Int size)
     {
         var xDirections = new List<int> { 1, -1 }.Shuffle();
@@ -349,100 +395,7 @@ public class VoxelGrid
 
     #endregion
 
-    #region Grid elements constructors
-
-    /// <summary>
-    /// Creates the Faces of each <see cref="Voxel"/>
-    /// </summary>
-    private void MakeFaces()
-    {
-        // make faces
-        Faces[0] = new Face[Size.x + 1, Size.y, Size.z];
-
-        for (int x = 0; x < Size.x + 1; x++)
-            for (int y = 0; y < Size.y; y++)
-                for (int z = 0; z < Size.z; z++)
-                {
-                    Faces[0][x, y, z] = new Face(x, y, z, Axis.X, this);
-                }
-
-        Faces[1] = new Face[Size.x, Size.y + 1, Size.z];
-
-        for (int x = 0; x < Size.x; x++)
-            for (int y = 0; y < Size.y + 1; y++)
-                for (int z = 0; z < Size.z; z++)
-                {
-                    Faces[1][x, y, z] = new Face(x, y, z, Axis.Y, this);
-                }
-
-        Faces[2] = new Face[Size.x, Size.y, Size.z + 1];
-
-        for (int x = 0; x < Size.x; x++)
-            for (int y = 0; y < Size.y; y++)
-                for (int z = 0; z < Size.z + 1; z++)
-                {
-                    Faces[2][x, y, z] = new Face(x, y, z, Axis.Z, this);
-                }
-    }
-
-    /// <summary>
-    /// Creates the Edges of each Voxel
-    /// </summary>
-    private void MakeEdges()
-    {
-        Edges[2] = new Edge[Size.x + 1, Size.y + 1, Size.z];
-
-        for (int x = 0; x < Size.x + 1; x++)
-            for (int y = 0; y < Size.y + 1; y++)
-                for (int z = 0; z < Size.z; z++)
-                {
-                    Edges[2][x, y, z] = new Edge(x, y, z, Axis.Z, this);
-                }
-
-        Edges[0] = new Edge[Size.x, Size.y + 1, Size.z + 1];
-
-        for (int x = 0; x < Size.x; x++)
-            for (int y = 0; y < Size.y + 1; y++)
-                for (int z = 0; z < Size.z + 1; z++)
-                {
-                    Edges[0][x, y, z] = new Edge(x, y, z, Axis.X, this);
-                }
-
-        Edges[1] = new Edge[Size.x + 1, Size.y, Size.z + 1];
-
-        for (int x = 0; x < Size.x + 1; x++)
-            for (int y = 0; y < Size.y; y++)
-                for (int z = 0; z < Size.z + 1; z++)
-                {
-                    Edges[1][x, y, z] = new Edge(x, y, z, Axis.Y, this);
-                }
-    }
-
-    #endregion Grid elements constructors
-
-    #region Grid helpers
-
-
-    /// <summary>
-    /// Get the Faces of the <see cref="VoxelGrid"/>
-    /// </summary>
-    /// <returns>All the faces</returns>
-    public IEnumerable<Face> GetFaces()
-    {
-        for (int n = 0; n < 3; n++)
-        {
-            int xSize = Faces[n].GetLength(0);
-            int ySize = Faces[n].GetLength(1);
-            int zSize = Faces[n].GetLength(2);
-
-            for (int x = 0; x < xSize; x++)
-                for (int y = 0; y < ySize; y++)
-                    for (int z = 0; z < zSize; z++)
-                    {
-                        yield return Faces[n][x, y, z];
-                    }
-        }
-    }
+    #region Métodos auxiliares
 
     /// <summary>
     /// Get the Voxels of the <see cref="VoxelGrid"/>
@@ -458,29 +411,7 @@ public class VoxelGrid
                 }
     }
 
-
-    /// <summary>
-    /// Get the Edges of the <see cref="VoxelGrid"/>
-    /// </summary>
-    /// <returns>All the edges</returns>
-    public IEnumerable<Edge> GetEdges()
-    {
-        for (int n = 0; n < 3; n++)
-        {
-            int xSize = Edges[n].GetLength(0);
-            int ySize = Edges[n].GetLength(1);
-            int zSize = Edges[n].GetLength(2);
-
-            for (int x = 0; x < xSize; x++)
-                for (int y = 0; y < ySize; y++)
-                    for (int z = 0; z < zSize; z++)
-                    {
-                        yield return Edges[n][x, y, z];
-                    }
-        }
-    }
-
-    #endregion Grid helpers
+    #endregion
 
 
 }

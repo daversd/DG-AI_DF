@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Barracuda;
 
+/// <summary>
+/// Esta classe permite a execução de um modelo treinado de Pix2Pix para
+/// realizer inferências a partir de imagens novas
+/// </summary>
 public class Pix2Pix
 {
-    #region Fields and Properties
+    #region Campos e propriedades
 
     NNModel _modelAsset;
     Model _loadedModel;
@@ -13,14 +17,13 @@ public class Pix2Pix
 
     #endregion
 
-    #region Constructor
+    #region Construtor
 
     /// <summary>
-    /// Constructor for a regualar Pix2Pix inference object
+    /// Construtor de um objeto de inferência Pix2pix
     /// </summary>
     public Pix2Pix()
     {
-        // Initialise the model
         _modelAsset = Resources.Load<NNModel>("NeuralModels/treinado");
         _loadedModel = ModelLoader.Load(_modelAsset);
         _worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, _loadedModel);
@@ -28,32 +31,31 @@ public class Pix2Pix
 
     #endregion
 
-    #region Public Methods
+    #region Métodos públicos
 
-    // 38 Create the prediction method
     /// <summary>
-    /// Runs the inference model on an input image to generate a new translated image
+    /// Executa o modelo de inferência em uma imagem e gera a previsão de uma imagem traduzida
     /// </summary>
     /// <param name="image"></param>
     /// <returns></returns>
     public Texture2D Predict(Texture2D image)
     {
-        // 39 Translate the input image into a 3 channels (RGB) tensor
+        // Traduz a imagem original para um tensor de 3 canais (RGB)
         Tensor imageTensor = new Tensor(image, channels: 3);
 
-        // 40 Normalise the tensor to the model's expected range
+        // Normaliza o tensor para o campo que o modelo espera
         var normalisedInput = NormaliseTensor(imageTensor, 0f, 1f, -1f, 1f);
 
-        // 41 Execute the tensor
+        // Executa o modelo no tensor
         _worker.Execute(normalisedInput);
 
-        // 42 Get the result prediction and normalised back to image range
+        // Retorna o resultado da previsão do modelo
         var outputTensor = _worker.PeekOutput();
 
-        // 43 Translate the tensor into an image
+        // Traduz o tensor para uma imagem
         Texture2D prediction = Tensor2Image(outputTensor, image);
 
-        // 44 Dispose of used tensors
+        // Descarta os tensores utilizados
         imageTensor.Dispose();
         normalisedInput.Dispose();
         outputTensor.Dispose();
@@ -63,27 +65,24 @@ public class Pix2Pix
 
     #endregion
 
-    #region Private Methods
+    #region Métodos privados
 
     /// <summary>
-    /// Translates a Tensor into a Texture2D
+    /// Traduz um tensor em Texture2D
     /// </summary>
-    /// <param name="inputTensor">The Tensor to be translated</param>
-    /// <param name="inputTexture">A reference Texture2D for formatting</param>
+    /// <param name="inputTensor"></param>
+    /// <param name="inputTexture"></param>
     /// <returns></returns>
     Texture2D Tensor2Image(Tensor inputTensor, Texture2D inputTexture)
     {
-        //Apply output tensor to a temp RenderTexture
         var tempRT = new RenderTexture(256, 256, 24);
         inputTensor.ToRenderTexture(tempRT);
         RenderTexture.active = tempRT;
 
-        //Assign temp RenderTexture to a new Texture2D
         var resultTexture = new Texture2D(inputTexture.width, inputTexture.height);
         resultTexture.ReadPixels(new Rect(0, 0, tempRT.width, tempRT.height), 0, 0);
         resultTexture.Apply();
 
-        //Destroy temp RenderTexture
         RenderTexture.active = null;
         tempRT.DiscardContents();
 
@@ -91,14 +90,14 @@ public class Pix2Pix
     }
 
     /// <summary>
-    /// Normalizes a tensor to a target range
+    /// Normaliza um tensor para um campo determinado
     /// </summary>
     /// <param name="inputTensor"></param>
-    /// <param name="a1">Original range minimum</param>
-    /// <param name="a2">Original range maximum</param>
-    /// <param name="b1">Target range minimum</param>
-    /// <param name="b2">Target range maximum</param>
-    /// <returns>The normalised tensor</returns>
+    /// <param name="a1">Mínimo original</param>
+    /// <param name="a2">Máximo original</param>
+    /// <param name="b1">Mínimo esperado</param>
+    /// <param name="b2">Máximo esperado</param>
+    /// <returns></returns>
     Tensor NormaliseTensor(Tensor inputTensor, float a1, float a2, float b1, float b2)
     {
         var data = inputTensor.data.Download(inputTensor.shape);
