@@ -26,6 +26,7 @@ public class EnvironmentManager : MonoBehaviour
     /// <summary>Seed para controle dos números aleatórios</summary>
     int _seed = 666;
 
+    // 09 (p2p) Cria o objeto de inferência do modelo Pix2Pix
     /// <summary>Objeto de previsão do modelo Pix2Pix</summary>
     Pix2Pix _pix2pix;
 
@@ -55,7 +56,7 @@ public class EnvironmentManager : MonoBehaviour
         var maxSize = _uiManager.MaxGridSize;
         _grid = new VoxelGrid(gridSize, maxSize, transform.position, 1f, transform);
 
-        // Cria o objeto de inferência do modelo Pix2Pix
+        // 10 (p2p) Inicializa o objeto de inferência do modelo Pix2Pix
         _pix2pix = new Pix2Pix();
     }
 
@@ -174,20 +175,28 @@ public class EnvironmentManager : MonoBehaviour
         PopulateBoxesAndSave(500, 3, 10, 3, 10, 3, 10);
     }
 
+    // 11 (p2p) Criar o método de previsão e atualização do grid
     /// <summary>
     /// Executa o modelo Pix2Pix no atual estado do <see cref="VoxelGrid"/> e atualiza
     /// o estado dos Voxels de acordo com os pixels da imagem resultante
     /// </summary>
     public void PredictAndUpdate()
     {
+        // 12 (p2p) Limpar voxels vermelhos e gerar imagem
         _grid.ClearReds();
         var image = _grid.ImageFromGrid();
 
+        // 13 (p2p) Redimensionar image
         var resized = ImageReadWrite.Resize256(image, Color.white);
+
+        // 14 (p2p) Gerar previsão
         _sourceImage = _pix2pix.Predict(resized);
+
+        // 15 (p2p) Redimensionar imagem para o tamnho do grid e atualizar os voxels vermelhos
         TextureScale.Point(_sourceImage, _grid.Size.x, _grid.Size.z);
         UpdateReds();
 
+        // 16 (p2p) Exibir as imagens produzidas na UI
         _uiManager.SetInputImage(Sprite.Create(resized, new Rect(0, 0, resized.width, resized.height), Vector2.one * 0.5f));
         _uiManager.SetOutputImage(Sprite.Create(_sourceImage, new Rect(0, 0, _sourceImage.width, _sourceImage.height), Vector2.one * 0.5f));
 
@@ -266,6 +275,8 @@ public class EnvironmentManager : MonoBehaviour
         {
             _grid.MakeBox(_height);
             _stage = AppStage.Neutral;
+
+            // 17 (p2p) Executar a previsão após o término do processo de desenho
             PredictAndUpdate();
         }
     }

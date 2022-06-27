@@ -33,6 +33,7 @@ public class Pix2Pix
 
     #region Métodos públicos
 
+    // 01 Criar o método de previsão do modelo
     /// <summary>
     /// Executa o modelo de inferência em uma imagem e gera a previsão de uma imagem traduzida
     /// </summary>
@@ -40,22 +41,22 @@ public class Pix2Pix
     /// <returns></returns>
     public Texture2D Predict(Texture2D image)
     {
-        // Traduz a imagem original para um tensor de 3 canais (RGB)
+        // 02 Traduz a imagem original para um tensor de 3 canais (RGB)
         Tensor imageTensor = new Tensor(image, channels: 3);
 
-        // Normaliza o tensor para o campo que o modelo espera
+        // 03 Normaliza o tensor para o campo que o modelo espera
         var normalisedInput = NormaliseTensor(imageTensor, 0f, 1f, -1f, 1f);
 
-        // Executa o modelo no tensor
+        // 04 Executa o modelo no tensor
         _worker.Execute(normalisedInput);
 
-        // Retorna o resultado da previsão do modelo
+        // 05 Retorna o resultado da previsão do modelo
         var outputTensor = _worker.PeekOutput();
 
-        // Traduz o tensor para uma imagem
+        // 07 Traduz o tensor para uma imagem
         Texture2D prediction = Tensor2Image(outputTensor, image);
 
-        // Descarta os tensores utilizados
+        // 08 Descarta os tensores utilizados
         imageTensor.Dispose();
         normalisedInput.Dispose();
         outputTensor.Dispose();
